@@ -1,0 +1,117 @@
+---
+kind: pipeline
+type: docker
+name: test
+
+workspace:
+  path: /app
+
+steps:
+  - name: export requirements file
+    image: python:3.9-slim
+    commands:
+      - pip install --upgrade pip poetry
+      - poetry export -f requirements.txt --output /project/requirements.txt --without-hashes
+    volumes:
+      - name: pythonpath
+        path: /project
+
+  - name: test
+    image: python:3.9-slim
+    environment:
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
+    commands:
+      - pip install --upgrade pip
+      - pip install --no-cache-dir --upgrade -r /project/requirements.txt
+      - python ./src/main.test.py
+    volumes:
+      - name: pythonpath
+        path: /project
+
+
+  - name: notification
+    image: appleboy/drone-telegram
+    when:
+      status:
+        - failure
+        - success
+    settings:
+      token:
+        from_secret: Telegram_gggoingdown_CI_bot_token
+      to:
+        from_secret: Telegram_chat_id
+      message: >
+        {{#success build.status}}
+          Version: {{build.number}}
+          Repository: {{repo.name}}
+          Branch: {{commit.branch}}
+          Message: Test succeeded. Good job.
+          Commit message:  {{commit.message}}
+        {{else}}
+          Version: {{build.number}}
+          Repository: {{repo.name}}
+          Branch: {{commit.branch}}
+          Message: Test failed. Fix me please.
+          Commit message:  {{commit.message}}
+        {{/success}}
+
+trigger:
+  ref:
+  - refs/heads/**
+
+volumes:
+  - name: pythonpath
+    temp: {}
+
+
+---
+kind: pipeline
+type: docker
+name: build
+
+steps:
+  - name: docker
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: DOCKER_USERNAME
+      password:
+        from_secret: DOCKER_PASSWORD
+      repo: gggoingdown/openapi2html
+      tags:
+        - latest
+        - ${DRONE_TAG}
+      storage_driver: vfs
+
+  - name: notification
+    image: appleboy/drone-telegram
+    when:
+      status:
+        - success
+        - failure
+    settings:
+      token:
+        from_secret: Telegram_gggoingdown_CI_bot_token
+      to:
+        from_secret: Telegram_chat_id
+      message: >
+        {{#success build.status}}
+          Version: {{build.number}}
+          Repository: {{repo.name}}
+          Message: build image succeeded. Good job.
+          Commit message:  {{commit.message}}
+        {{else}}
+          Version: {{build.number}}
+          Repository: {{repo.name}}
+          Message: build image failed. Fix me please.
+          Commit message:  {{commit.message}}
+        {{/success}}
+
+trigger:
+  event:
+    - tag
+
+---
+kind: signature
+hmac: e5e239560bc125a20ff2ac1fea50915bc198dd4f5b5256ec447a8a71e00132b3
