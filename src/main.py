@@ -109,6 +109,7 @@ def get_redoc_html(
         <div id="redoc-container"></div>
         <script src="{redoc_js_url}"> </script>
         <script>
+            var blank = ""
             var spec = {openapi_schema};
             Redoc.init(spec, '{{}}', document.getElementById("redoc-container"));
         </script>
