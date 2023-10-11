@@ -74,7 +74,7 @@ def get_swagger_ui_html(
 
 def get_redoc_html(
     *,
-    openapi_schema: Dict,
+    openapi_schema: str,
     title: str,
     redoc_js_url: str = "https://cdn.jsdelivr.net/npm/redoc@next/bundles/redoc.standalone.js",
     redoc_favicon_url: str = "https://fastapi.tiangolo.com/img/favicon.png",
@@ -109,7 +109,6 @@ def get_redoc_html(
         <div id="redoc-container"></div>
         <script src="{redoc_js_url}"> </script>
         <script>
-            var blank = ""
             var spec = {openapi_schema};
             Redoc.init(spec, '{{}}', document.getElementById("redoc-container"));
         </script>
@@ -128,7 +127,7 @@ def main(source: str, save_to: str, save_type: str, auto_latest: bool):
     version = openapi_schema["info"]["version"]
 
     if save_type == "redoc":
-        html = get_redoc_html(openapi_schema=openapi_schema, title=title)
+        html = get_redoc_html(openapi_schema=json.dumps(openapi_schema), title=title)
     elif save_type == "swagger":
         html = get_swagger_ui_html(openapi_schema=openapi_schema, title=title)
     else:
